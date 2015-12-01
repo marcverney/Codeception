@@ -1,6 +1,7 @@
 <?php
 namespace Codeception\Lib;
 
+use Codeception\Exception\TestParseException;
 use Codeception\Scenario;
 use Codeception\Step;
 use Codeception\Util\Annotation;
@@ -59,9 +60,7 @@ class Parser
                 );
                 eval($line);
             }
-
         }
-
     }
 
     public function attachMetadata($comments)
@@ -125,9 +124,33 @@ class Parser
         $this->scenario->addStep(new \Codeception\Step\Comment($comment, []));
     }
 
+    public static function validate($file)
+    {
+        if (defined('HHVM_VERSION') // not for HHVM
+            || (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') // not for WIN
+        ) {
+            return;
+        }
+        exec("php -l $file", $output, $code);
+        if ($code == 255) {
+            throw new TestParseException($file, implode("\n", $output));
+        }
+    }
+
+    public static function load($file)
+    {
+        if (PHP_MAJOR_VERSION < 7) {
+            self::validate($file);
+        }
+        try {
+            self::includeFile($file);
+        } catch (\ParseError $e) {
+            throw new TestParseException($file, $e->getMessage());
+        }
+    }
+
     public static function getClassesFromFile($file)
     {
-        self::includeFile($file);
         $sourceCode = file_get_contents($file);
         $classes = [];
         $tokens = token_get_all($sourceCode);

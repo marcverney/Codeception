@@ -150,4 +150,43 @@ EOF;
         $classes = Parser::getClassesFromFile(codecept_data_dir('unsetFile.php'));
         $this->assertEquals([], $classes);
     }
+    /**
+     * @group core
+     * @throws \Codeception\Exception\TestParseException
+     */
+    public function testCeptValidation()
+    {
+        if (defined('HHVM_VERSION') // not for HHVM
+            || (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') // not for WIN
+        ) {
+            $this->markTestSkipped();
+        }
+        $this->setExpectedException('Codeception\Exception\TestParseException');
+        Parser::validate(codecept_data_dir('Invalid.php'));
+    }
+
+    /**
+     * @group core
+     * @throws \Codeception\Exception\TestParseException
+     */
+    public function testModernValidation()
+    {
+        if (PHP_MAJOR_VERSION < 7) {
+            $this->markTestSkipped();
+        }
+        $this->setExpectedException('Codeception\Exception\TestParseException');
+        Parser::load(codecept_data_dir('Invalid.php'));
+    }
+
+    /**
+     * @group core
+     */
+    public function testClassesFromFile()
+    {
+        $classes = Parser::getClassesFromFile(codecept_data_dir('DummyClass.php'));
+        $this->assertContains('DummyClass', $classes);
+        $classes = Parser::getClassesFromFile(codecept_data_dir('SimpleWithDependencyInjectionCest.php'));
+        $this->assertContains('simpleDI\\LoadedTestWithDependencyInjectionCest', $classes);
+        $this->assertContains('simpleDI\\AnotherCest', $classes);
+    }
 }
